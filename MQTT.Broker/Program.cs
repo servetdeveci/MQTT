@@ -6,7 +6,8 @@ namespace MQTT.Broker
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
+            Broker broker = new Broker();
+            broker.Start();
         }
     }
 }

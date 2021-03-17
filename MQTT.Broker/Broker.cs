@@ -11,38 +11,49 @@ namespace MQTT.Broker
 {
     public class Broker
     {
-     
+        IMqttServer _mqttServer;
+        MqttServerOptionsBuilder _mqttServerOptionsBuilder;
+
+        public Broker()
+        {
+            _mqttServerOptionsBuilder = new MqttServerOptionsBuilder()
+                .WithConnectionValidator(c =>
+                {
+                    // Bağlanan Client ip adresi ClientId si konsol ekranından görmek için yazıyoruz. 
+                    Console.WriteLine($"{DateTime.Now.ToString("HH:mm:ss")} Endpoint: {c.Endpoint}  ==> ClientId {c.ClientId}");
+                    if (c.Username == "sizin_kullanici_adiniz" && c.Password == "sizin_sifreniz")
+                        c.ReasonCode = MqttConnectReasonCode.Success; // Bağlanmaya çalışan kişiye username ve password dogru ise bağlanma izni verme
+                    else
+                        c.ReasonCode = MqttConnectReasonCode.NotAuthorized; // Bağlanmaya çalışan kişiye username ve password yanlış ise bağlanma izni verilmez
+                })
+                .WithApplicationMessageInterceptor(async context => // asenkron kod blogu içerecek ise async kullanılabilir yoksa kaldırılmalı
+                {
+                    Console.WriteLine($"Id: {context.ClientId} ==>  \ntopic: {context.ApplicationMessage.Topic} \nPayload==> {Encoding.UTF8.GetString(context.ApplicationMessage.Payload)}");
+                    // await SendToApi(context); // Gelen-Giden Veri trafiğinin kontrolü  ve Gerekirse bir servise veri gönderme işlemi burdan yapılabilir.
+                })
+                .WithConnectionBacklog(1000) // aynı anda kaç bağlantının kuyrukta tutulacağı
+                .WithDefaultEndpointBoundIPAddress(System.Net.IPAddress.Parse("127.0.0.1")) // server ip adres yada bilgisayarın localhost u kullanılabilir
+                .WithDefaultEndpointPort(1884); // bilgisayar yada server'dan bağlanan port bilgsi
+
+
+
+        }
 
         public void Start()
         {
-            var optionsBuilder = new MqttServerOptionsBuilder()
-                .WithConnectionValidator(c =>
-                {
-                    Console.WriteLine($"{DateTime.Now.ToString("HH:mm:ss")} Endpoint: {c.Endpoint}  ==> ClientId {c.ClientId} username: {c.Username}  ==> password {c.Password}");
-                    c.ReasonCode = MqttConnectReasonCode.Success;
+            _mqttServer = new MqttFactory().CreateMqttServer();
+            _mqttServer.StartAsync(_mqttServerOptionsBuilder.Build()).Wait();
 
-                    //if (c.Username == "atlas" && c.Password == "atlas")
-                    //    c.ReasonCode = MqttConnectReasonCode.Success;
-                    //else
-                    //    c.ReasonCode = MqttConnectReasonCode.NotAuthorized;
-                })
-                .WithApplicationMessageInterceptor(async context =>
-                {
-                    // await SendToApi(context); // apiye gönderme 
-                })
-                .WithConnectionBacklog(100)
-                .WithDefaultEndpointBoundIPAddress(System.Net.IPAddress.Parse("192.168.1.101"))
-                .WithDefaultEndpointPort(1884);
+            // MQTT 
+            Console.WriteLine($"Mqtt Broker Oluşturuldu: Host: {_mqttServer.Options.DefaultEndpointOptions.BoundInterNetworkAddress} Port: {_mqttServer.Options.DefaultEndpointOptions.Port}"); ;
 
             //start server
-            var mqttServer = new MqttFactory().CreateMqttServer();
-            mqttServer.StartAsync(optionsBuilder.Build()).Wait();
-
-            Console.WriteLine($"Mqtt Broker çalışıyor: Host: {mqttServer.Options.DefaultEndpointOptions.BoundInterNetworkAddress} Port: {mqttServer.Options.DefaultEndpointOptions.Port}");
-
-            Console.ReadLine();
             Task.Run(() => Thread.Sleep(Timeout.Infinite)).Wait();
-            mqttServer.StopAsync().Wait();
+
+        }
+        public void Stop()
+        {
+            _mqttServer.StopAsync().Wait();
         }
     }
 }
