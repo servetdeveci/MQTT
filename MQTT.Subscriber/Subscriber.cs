@@ -32,8 +32,8 @@ namespace MQTT.Subscriber
             {
                 Console.WriteLine("MQTT Broker'a başarılı bir şekilde bağlanıldı...");
                 //Subscribe to topic
-                _client.SubscribeAsync(new TopicFilterBuilder().WithTopic("Konu_1").Build()).Wait();
-                _client.SubscribeAsync(new TopicFilterBuilder().WithTopic("Konu_2").Build()).Wait();
+                _client.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("Konu_1").Build()).Wait();
+                _client.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic("Konu_2").Build()).Wait();
             });
             _client.UseDisconnectedHandler(e => // broker'dan bağlantısı koptuğunda çalışacak kod
             {
